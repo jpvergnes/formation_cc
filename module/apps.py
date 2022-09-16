@@ -164,7 +164,7 @@ class App():
                 #method='Nelder-Mead',
                 tol=1e-6,
                 options={
-                    'maxiter':100,
+                    'maxiter':250,
                 }
             )
         self.btnOpti.disabled = False
@@ -280,8 +280,8 @@ class App():
 
     def run_model(self, A, R, THG, TG1):
         S = np.mean(self.pnm[self.pnm > 0])
-        G = 600
-        H = 200
+        G = 0
+        H = 0
         Qrl, Qg1l, h = [], [], []
         for istep in range(len(self.pluie)):
             Pn, ETR, S = production(
@@ -302,7 +302,7 @@ class App():
             h.append(H)
         q = np.array(Qg1l) + np.array(Qrl)
         q = q * 1e-3 / 86400 * self.area * 1e6
-        return q, h
+        return q, np.array(h*1e-3)
 
 #class App2():
 #    def __init__(self):

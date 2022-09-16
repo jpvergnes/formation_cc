@@ -9,18 +9,19 @@ def production(A, S, P, ETP):
     Pn : pluie nette
     ETR : ETR
     """
-    Satur = S / A
     if P >= ETP:
         P1 = (P - ETP)
-        Pn = P1 * Satur**2
         ETR = 0
-        S = S + A * np.tanh(P1 / A) * ((1 - (S / A)**2)/ (1 + (S / A) * np.tanh(P / A)))
+        Snew = (S + A * np.tanh(P1 / A)) / (1 + S / A * np.tanh(P1 / A))
+        DEBORD = np.maximum(Snew - A, 0)
+        Pn = P1 - (Snew - S) + DEBORD
     else:
         E1 = (ETP - P)
         Pn = 0
-        ETR = E1 * Satur * (2 - Satur)
-        S = S - E1 *( S / (E1 + A /(2 - S / A)))
-    return Pn, ETR, S
+        Snew = S * (1 - np.tanh(E1 / A)) / (1 + (1 - S / A) * np.tanh(E1 / A))
+        Snew = np.maximum(0, Snew)
+        ETR = P + S - Snew
+    return Pn, ETR, Snew
 
 def intermediaire(R, THG, N, Pn, HP):
     """
@@ -38,6 +39,7 @@ def intermediaire(R, THG, N, Pn, HP):
     TGHM = 1 / (1 - np.exp(- np.log(2) / (N * THG)))
     H = H0 * (TGHM - 1) / (TGHM + H0 / R)
     Qi = R * np.log(1 + H / (TGHM * R))
+    Qi = max(Qi, 0)
     Qr = (H0 - H)  - Qi
     return Qr, Qi, H
 
@@ -51,7 +53,8 @@ def souterrain(TG1, N, Qi, GP):
     G : hauteur d'eau souterraine
     """
     G0 = GP + Qi
-    Qg1 = np.minimum(G0 * (1 - np.exp(-np.log(2) / (N* TG1))), G0)
+    Qg1 = np.minimum(G0 * (1 - np.exp(-np.log(2) / (N * TG1))), G0)
+    Qg1 = np.maximum(Qg1, 0)
     G = np.maximum(G0 - Qg1, 0)
     return Qg1, G
 
