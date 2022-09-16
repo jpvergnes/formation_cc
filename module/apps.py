@@ -277,7 +277,6 @@ class App():
             self.ax1.set_xlim(xlims[0], xlims[1])
         self.fig.tight_layout()
         self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
 
     def run_model(self, A, R, THG, TG1):
         S = np.mean(self.pnm[self.pnm > 0])
