@@ -1,0 +1,17 @@
+Selle à Plachy + Niv Piézo Morvillers : Pl 9 Stat Moy BV 1985-2003
+<<< Débits : Selle à Plachy + Niveau : Piézo Morvillers-St-Saturnin      >>>
+<<< Piézo Morvillers-St-Saturnin = 00608X0028 (x=560.597 ; y = 2529.907) >>>
+ #<V8.1># --- Fin du texte libre --- ; Ne pas modifier/retirer cette ligne
+Selle_et_Morvillers_1985_2003.gar                           = Paramètres et Options
+Pluv_Moy_9_Stat_Selle_1985_2003.prn                         = Pluies
+Etp_Moy_9_Stat_Selle_1985_2003.prn                          = Évapo-Transpirations Potentielles (ETP)
+Debit_Selle_Plachy_1985_2003.prn                            = Débits de Rivière
+Niv_Morvillers_00608X0028_1985_2003.prn                     = Niveaux de Nappe
+                                                            = Températures de l'air
+                                                            = Précipitations Neigeuses
+                                                            = Pluies pour Prévision
+                                                            = ETP pour Prévision
+                                                            = Températures pour Prévision
+                                                            = Précipitations neigeuses pour Prévision
+                                                            = Injections/Pompages
+                                                            = Mailles météo et Pondérations
