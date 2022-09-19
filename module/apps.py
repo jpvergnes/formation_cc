@@ -8,7 +8,7 @@ from scipy.stats import linregress
 import matplotlib.pyplot as plt
 
 class App():
-    def __init__(self, pluie, etp, debit, niveau):
+    def __init__(self, debit, niveau):
         self.area = 524
         self.start = 365*4
         bounds = [
@@ -18,13 +18,8 @@ class App():
             [6, 70]
         ]
         self.bounds = bounds
-        self.pluie = pluie.squeeze().values
-        self.etp = etp.squeeze().values
         self.debit = debit.squeeze().values
         self.niveau = niveau.squeeze().values
-        self.pnm = self.pluie - self.etp
-        self.dates = pluie.index
-        self.daysinmonth = [date.daysinmonth for date in self.dates]
         self.sliderA = widgets.FloatSlider(
             value=180,
             min=bounds[0][0],
@@ -112,18 +107,13 @@ class App():
         self.ax2.sharex(self.ax1)
         self.fig.canvas.header_visible = False
         plt.ion()
-        
-        #self.widget = [
-        #    self.sliderA, self.sliderR, 
-        #    self.sliderTHG, self.sliderTG1, 
-        #    self.baseNiv, self.coeffEmmag,
-        #    self.textNash, self.textKGE,
-        #    self.textNashNiv,
-        #    self.btnOpti,
-        #    self.fig.canvas,
-        #    self.out
-        #]
-        #widgets.VBox(self.widget)
+    
+    def set_meteo(self, pluie, etp):
+        self.pluie = pluie.squeeze().values
+        self.etp = etp.squeeze().values
+        self.pnm = self.pluie - self.etp
+        self.dates = pluie.index
+        self.daysinmonth = [date.daysinmonth for date in self.dates]
         
     def set_observe(self):
         self.sliderA.observe(self.run, names='value')
@@ -179,7 +169,7 @@ class App():
         self.sliderTHG.value = res.x[2]
         self.sliderTG1.value = res.x[3]
         self.baseNiv.value = self.niv.round(2)
-        self.coeffEmmag.value = self.emm.round(2)
+        self.coeffEmmag.value = 1 /  (self.emm*1000)
         self.set_observe()
         self.run(0)
 
@@ -188,24 +178,25 @@ class App():
         R = params[1]
         THG = params[2]
         TG1 = params[3]
-        q, h = self.run_model(A, R, THG, TG1)
-
-        h = np.array(h)
-        q = np.array(q)
-
-        #sim_h = h[~np.isnan(self.niveau)]
-        #obs_h = self.niveau[~np.isnan(self.niveau)]
-
-        q = q[self.start:]
-        h = h[self.start:]
+        qq, hh = self.run_model(A, R, THG, TG1)
+        
+        q = qq[self.start:]
+        h = hh[self.start:]
         niveau = self.niveau[self.start:]
         debit = self.debit[self.start:]
-
+        
         sim_h = h[~np.isnan(niveau)]
         obs_h = niveau[~np.isnan(niveau)]
-        res = linregress(sim_h, obs_h)
-        self.niv = res.intercept
-        self.emm = res.slope
+        df = pd.DataFrame(
+            {
+                'obs':obs_h,
+                'sim':sim_h,
+            }
+        )
+        res = np.polyfit(sim_h, obs_h, 1)
+        self.emm = res[0]
+        self.niv = res[1]
+
         sim_h = self.niv + self.emm * sim_h
         nse_h = nash(sim_h, obs_h)
         if nse_h >= -1:
@@ -232,56 +223,64 @@ class App():
         NIV = self.baseNiv.get_interact_value()
         EMM = self.coeffEmmag.get_interact_value()
         q, h = self.run_model(A, R, THG, TG1)
-        h = NIV + EMM * np.array(h)
+        h = NIV + 1 /(EMM * 1000) * np.array(h)
         q = q[self.start:]
         h = h[self.start:]
         niveau = self.niveau[self.start:]
         debit = self.debit[self.start:]
-
-        deb_os = pd.DataFrame(
-            {
-                'obs':debit,
-                'sim':q,
-            },
-            index=self.dates[self.start:]
-        )
-        deb_os = deb_os.dropna()
-        if self.xlims is not None:
-            xlims = self.ax1.get_xlim()
-        self.ax1.cla()
-        deb_os.plot(ax=self.ax1)
-        self.ax1.set_title("Débit - Selle à Plachy")
-        self.ax1.set_ylabel("m3/s")
-        self.ax1.grid()
-        self.textNash.value = nash(deb_os['sim'], deb_os['obs']).round(2)
-        self.textKGE.value = kge(deb_os['sim'], deb_os['obs']).round(2)
-
-        deb_os = pd.DataFrame(
-            {
-                'obs':niveau,
-                'sim':h,
-            },
-            index=self.dates[self.start:]
-        )
-        deb_os = deb_os.dropna()
-        self.ax2.cla()
-        deb_os.plot(ax=self.ax2)
-        self.ax2.set_title("Piézomètre à Morvillers")
-        self.ax2.set_ylabel("m")
-        self.ax2.grid()
-        self.textNashNiv.value = nash(deb_os['sim'], deb_os['obs']).round(2)
-
-        if self.xlims is None:
-            self.xlims = self.ax1.get_xlim()
+        if value == -9999.:
+            self.result = pd.DataFrame(
+                {
+                    'Débit':q,
+                    'Niveau':h
+                },
+                index = self.dates[self.start:]
+            )
         else:
-            self.ax1.set_xlim(xlims[0], xlims[1])
-        self.fig.tight_layout()
-        self.fig.canvas.draw()
+            deb_os = pd.DataFrame(
+                {
+                    'obs':debit,
+                    'sim':q,
+                },
+                index=self.dates[self.start:]
+            )
+            deb_os = deb_os.dropna()
+            if self.xlims is not None:
+                xlims = self.ax1.get_xlim()
+            self.ax1.cla()
+            deb_os.plot(ax=self.ax1)
+            self.ax1.set_title("Débit - Selle à Plachy")
+            self.ax1.set_ylabel("m3/s")
+            self.ax1.grid()
+            self.textNash.value = nash(deb_os['sim'], deb_os['obs']).round(2)
+            self.textKGE.value = kge(deb_os['sim'], deb_os['obs']).round(2)
+
+            deb_os = pd.DataFrame(
+                {
+                    'obs':niveau,
+                    'sim':h,
+                },
+                index=self.dates[self.start:]
+            )
+            deb_os = deb_os.dropna()
+            self.ax2.cla()
+            deb_os.plot(ax=self.ax2)
+            self.ax2.set_title("Piézomètre à Morvillers")
+            self.ax2.set_ylabel("m")
+            self.ax2.grid()
+            self.textNashNiv.value = nash(deb_os['sim'], deb_os['obs']).round(2)
+
+            if self.xlims is None:
+                self.xlims = self.ax1.get_xlim()
+            else:
+                self.ax1.set_xlim(xlims[0], xlims[1])
+            self.fig.tight_layout()
+            self.fig.canvas.draw()
 
     def run_model(self, A, R, THG, TG1):
-        S = np.mean(self.pnm[self.pnm > 0])
-        G = 0
-        H = 0
+        S =  508.73
+        G = 419.02
+        H = 71.811
         Qrl, Qg1l, h = [], [], []
         for istep in range(len(self.pluie)):
             Pn, ETR, S = production(
@@ -299,10 +298,11 @@ class App():
             )
             Qrl.append(Qr)
             Qg1l.append(Qg1)
-            h.append(H)
+            h.append(G)
         q = np.array(Qg1l) + np.array(Qrl)
         q = q * 1e-3 / 86400 * self.area * 1e6
-        return q, np.array(h*1e-3)
+        h = np.array(h)
+        return q, h
 
 #class App2():
 #    def __init__(self):

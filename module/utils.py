@@ -1,5 +1,40 @@
 import numpy as np
 
+drias2020 = [
+    ('CNRM-CM5-LR', 'ALADIN63', 'rcp2.6'),
+    ('CNRM-CM5-LR', 'ALADIN63', 'rcp4.5'),
+    ('CNRM-CM5-LR', 'ALADIN63', 'rcp8.5'),
+    ('CNRM-CM5-LR', 'RACMO22E', 'rcp2.6'),
+    ('CNRM-CM5-LR', 'RACMO22E', 'rcp4.5'),
+    ('CNRM-CM5-LR', 'RACMO22E', 'rcp8.5'),
+    ('EC-EARTH', 'RACMO22E', 'rcp2.6'),
+    ('EC-EARTH', 'RACMO22E', 'rcp4.5'),
+    ('EC-EARTH', 'RACMO22E', 'rcp8.5'),
+    ('EC-EARTH', 'RCA4', 'rcp2.6'),
+    ('EC-EARTH', 'RCA4', 'rcp4.5'),
+    ('EC-EARTH', 'RCA4', 'rcp8.5'),
+    ('HadGEM2-ES', 'CCLM4-8-17', 'rcp4.5'),
+    ('HadGEM2-ES', 'CCLM4-8-17', 'rcp8.5'),
+    ('HadGEM2-ES', 'RegCM4-6', 'rcp2.6'),
+    ('HadGEM2-ES', 'RegCM4-6', 'rcp8.5'),
+    ('IPSL-CM5A-MR', 'RCA4', 'rcp4.5'),
+    ('IPSL-CM5A-MR', 'RCA4', 'rcp8.5'),
+    ('IPSL-CM5A-MR', 'WRF381P', 'rcp4.5'),
+    ('IPSL-CM5A-MR', 'WRF381P', 'rcp8.5'),
+    ('MPI-ESM-LR', 'CCLM4-8-17', 'rcp2.6'),
+    ('MPI-ESM-LR', 'CCLM4-8-17', 'rcp4.5'),
+    ('MPI-ESM-LR', 'CCLM4-8-17', 'rcp8.5'),
+    ('MPI-ESM-LR', 'REMO2009', 'rcp2.6'),
+    ('MPI-ESM-LR', 'REMO2009', 'rcp4.5'),
+    ('MPI-ESM-LR', 'REMO2009', 'rcp8.5'),
+    ('NorESM1-M', 'HIRHAM5', 'rcp4.5'),
+    ('NorESM1-M', 'HIRHAM5', 'rcp8.5'),
+    ('NorESM1-M', 'REMO2015', 'rcp2.6'),
+    ('NorESM1-M', 'REMO2015', 'rcp8.5')
+]
+
+
+
 def production(A, S, P, ETP):
     """
     A : capacité du réservoir sol 
@@ -9,19 +44,33 @@ def production(A, S, P, ETP):
     Pn : pluie nette
     ETR : ETR
     """
-    if P >= ETP:
-        P1 = (P - ETP)
-        ETR = 0
-        Snew = (S + A * np.tanh(P1 / A)) / (1 + S / A * np.tanh(P1 / A))
-        DEBORD = np.maximum(Snew - A, 0)
-        Pn = P1 - (Snew - S) + DEBORD
-    else:
-        E1 = (ETP - P)
+    Peff = 0
+    ETR1 = 0
+    Pn = P
+    Snew = S
+    if ETP != 0:
+        Pn = P - ETP
+        ETR1 = min(P- Pn, P)
+    if Pn > 0:
+        Peff = Pn
+    ETP = 0
+    if Pn < 1e-5:
+        ETP = - Pn
+    if abs(Peff - ETP) < 1e-6:
+        ETR2 = ETP
+    elif ETP > Peff:
+        E1 = (ETP - Peff)
         Pn = 0
         Snew = S * (1 - np.tanh(E1 / A)) / (1 + (1 - S / A) * np.tanh(E1 / A))
         Snew = np.maximum(0, Snew)
-        ETR = P + S - Snew
-    return Pn, ETR, Snew
+        ETR2 = P + S - Snew
+    elif Peff > ETP:
+        P1 = (Peff - ETP)
+        ETR2 = 0
+        Snew = (S + A * np.tanh(P1 / A)) / (1 + S / A * np.tanh(P1 / A))
+        DEBORD = np.maximum(Snew - A, 0)
+        Pn = P1 - (Snew - S) + DEBORD
+    return Pn, ETR1 + ETR2, Snew
 
 def intermediaire(R, THG, N, Pn, HP):
     """
@@ -35,12 +84,14 @@ def intermediaire(R, THG, N, Pn, HP):
     Qi : écoulement lent
     """
     H0 = HP + Pn
-    C = H0 / (H0 + R)
     TGHM = 1 / (1 - np.exp(- np.log(2) / (N * THG)))
-    H = H0 * (TGHM - 1) / (TGHM + H0 / R)
-    Qi = R * np.log(1 + H / (TGHM * R))
-    Qi = max(Qi, 0)
-    Qr = (H0 - H)  - Qi
+    TGHM = max(TGHM, 1)
+    D = 1 - 1 / TGHM
+    Qi = R * np.log(1 + H0 / (TGHM * R))
+    H = H0 * D / (1 + H0 / (TGHM * R))
+    Qr = H0 - H - Qi
+    Qr = max(Qr, 0)
+    Qi = H0 - H - Qr
     return Qr, Qi, H
 
 def souterrain(TG1, N, Qi, GP):
