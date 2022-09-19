@@ -1,5 +1,6 @@
 matplotlib
 voila
+voila-material
 ipywidgets
 pandas
 numpy
