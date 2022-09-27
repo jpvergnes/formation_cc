@@ -1,9 +1,0 @@
-matplotlib
-voila
-voila-material
-ipywidgets
-pandas
-numpy
-ipympl
-scipy
-jupyterlab
