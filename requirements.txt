@@ -1,0 +1,9 @@
+numpy
+pandas
+matplotlib
+voila
+numpy
+ipywidgets
+ipympl
+scipy
+pymannkendall
