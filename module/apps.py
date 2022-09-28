@@ -421,18 +421,18 @@ class PlotSim():
             return df.loc['2005':]
         return df
     
-    def transform_ensemble(self, df):
+    def transform_ensemble(self, df, axis=1):
         ensemble = self.selectPlot.value
         df2 = {}
         if ensemble == "Q5/Mediane/Q95":
-            df2['q5'] = df.groupby(level="RCP", axis=1).quantile(0.05)
-            df2['Médiane'] = df.groupby(level="RCP", axis=1).quantile(0.5)
-            df2['q95'] = df.groupby(level="RCP", axis=1).quantile(0.95)
+            df2['q5'] = df.groupby(level="RCP", axis=axis).quantile(0.05)
+            df2['Médiane'] = df.groupby(level="RCP", axis=axis).quantile(0.5)
+            df2['q95'] = df.groupby(level="RCP", axis=axis).quantile(0.95)
             df = pd.concat(df2, axis=1)
         elif ensemble == 'Min/Moy/Max':
-            df2['Min'] = df.groupby(level="RCP", axis=1).min()
-            df2['Moy'] = df.groupby(level="RCP", axis=1).mean()
-            df2['Max'] = df.groupby(level="RCP", axis=1).max()
+            df2['Min'] = df.groupby(level="RCP", axis=axis).min()
+            df2['Moy'] = df.groupby(level="RCP", axis=axis).mean()
+            df2['Max'] = df.groupby(level="RCP", axis=axis).max()
             df = pd.concat(df2, axis=1)
         return df
             
@@ -466,7 +466,6 @@ class PlotSim():
         self.ax.legend(loc="upper left", bbox_to_anchor=(1.02, 0, 0.07, 1), prop={'size':6})
         self.fig.tight_layout()
     
-    
     def check_sim(self):
         models = self.selectModels.value
         rcps = self.selectRcps.value
@@ -487,8 +486,8 @@ class PlotSim():
                 serie = {}
                 result = mk.original_test(df.loc[:, column].dropna().values)
                 serie['trend'] = result.trend
-                serie['p-value'] = result.p.round(2)
-                serie['slope'] = result.slope.round(3)
+                serie['p-value'] = result.p.round(4)
+                serie['slope'] = result.slope.round(4)
                 serie = pd.Series(serie)
                 dfout[column] = serie
             dfout = pd.concat(dfout, axis=1)
@@ -571,7 +570,7 @@ class PlotSim2():
         self.fig.canvas.header_visible = False
         plt.ion()
         self.main = widgets.HBox([self.col_para, self.fig.canvas])
-        self.label = widgets.Label("Statistiques : ")
+        self.label = widgets.Label("Moyennes interannuelles sur 30 ans : ")
         self.out = widgets.Output(layout=widgets.Layout(overflow='visible', width="1500"))
 
     def main_sim(self, b):
@@ -588,9 +587,15 @@ class PlotSim2():
             if self.checkAnom.value:
                 for period in self.selectPeriod.value:
                     df[period] = df[period] - df['1976-2005']
+                    self.dfmean.loc[(period, slice(None), slice(None))] = (
+                        self.dfmean[period].values - self.dfmean['1976-2005'].values
+                    )
                 del df['1976-2005']
+                del self.dfmean['1976-2005']
             df = self.transform_ensemble(df)
+            self.dfmean = self.transform_ensemble(self.dfmean, axis=0)
             self.plot_sim(df)
+            self.test_stats()
         self.btnPlot.disabled = False
 
     def transform_indic(self, df):
@@ -617,7 +622,6 @@ class PlotSim2():
             df3['1976-2005'] = dfc.groupby(dfc.index.month).mean()
             for period in self.selectPeriod.value:
                 dfc = df2[period]
-
                 df3[period] = dfc.groupby(dfc.index.month).mean()
         else:
             dfc = df2['1976-2005']
@@ -626,20 +630,21 @@ class PlotSim2():
                 dfc = df2[period]
                 df3[period] = dfc.groupby(dfc.index.dayofyear).mean()
         df = pd.concat(df3, axis=1, names=['Period'])
+        self.dfmean = df.mean(axis=0)
         return df
 
-    def transform_ensemble(self, df):
+    def transform_ensemble(self, df, axis=1):
         ensemble = self.selectPlot.value
         df2 = {}
         if ensemble == "Q5/Mediane/Q95":
-            df2['q5'] = df.groupby(level=("Period", "RCP", ), axis=1).quantile(0.05)
-            df2['Médiane'] = df.groupby(level=("Period", "RCP"), axis=1).quantile(0.5)
-            df2['q95'] = df.groupby(level=("Period", "RCP"), axis=1).quantile(0.95)
+            df2['q5'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.05)
+            df2['Médiane'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.5)
+            df2['q95'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.95)
             df = pd.concat(df2, axis=1)
         elif ensemble == 'Min/Moy/Max':
-            df2['Min'] = df.groupby(level=("Period", "RCP"), axis=1).min()
-            df2['Moy'] = df.groupby(level=("Period", "RCP"), axis=1).mean()
-            df2['Max'] = df.groupby(level=("Period", "RCP"), axis=1).max()
+            df2['Min'] = df.groupby(level=("Period", "RCP"), axis=axis).min()
+            df2['Moy'] = df.groupby(level=("Period", "RCP"), axis=axis).mean()
+            df2['Max'] = df.groupby(level=("Period", "RCP"), axis=axis).max()
             df = pd.concat(df2, axis=1)
         return df
 
@@ -673,18 +678,16 @@ class PlotSim2():
                     )
         else:
             for column in df.columns:
-                df = df.iloc[:-1, :]
-                self.ax.plot(df.index, df.loc[:, column], label=column)
+                df2 = df.iloc[:-1, :]
+                self.ax.plot(df2.index, df2.loc[:, column], label=column)
         if self.selectIndic.value == "Journalier":
             self.ax.set_xticks([i for i in range(15, 370, 30)])
         else:
             self.ax.set_xticks([i for i in range(1, 13)])
         self.ax.set_xticklabels(['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'])
         self.ax.grid()
-        self.ax.legend()
         self.ax.legend(loc="upper left", bbox_to_anchor=(1.02, 0, 0.07, 1), prop={'size':6})
         self.fig.tight_layout()
-
 
     def check_sim(self):
         models = self.selectModels.value
@@ -697,3 +700,9 @@ class PlotSim2():
                 if os.path.exists(f):
                     select['{0} / {1}_{2}'.format(gcm, rcm, rcp)] = f
         return select
+    
+    def test_stats(self):
+        indic = self.selectIndic.value
+        with self.out:
+            self.out.clear_output()
+            display(self.dfmean)
