@@ -650,10 +650,6 @@ class PlotSim2():
 
     def plot_sim(self, df):
         self.ax.clear()
-        if self.selectVariable.value == "Débit":
-            self.ax.set_ylabel("m3/s")
-        elif self.selectVariable.value == "Niveau":
-            self.ax.set_ylabel("m")
 
         ensemble = self.selectPlot.value
         if ensemble == "Q5/Mediane/Q95":
@@ -706,3 +702,120 @@ class PlotSim2():
         with self.out:
             self.out.clear_output()
             display(self.dfmean)
+            
+class PlotSim3(PlotSim2):
+    def __init__(self):
+        super().__init__()
+        self.selectVariable = widgets.Dropdown(
+            options=['Pluie', 'ETP'],
+            description='Variable :',
+            disabled=False
+        )
+            
+        self.selectIndic = widgets.Dropdown(
+            options=[
+                'Journalier',
+                'Cumul mensuel',
+                'Cumul annuel',
+            ],
+            description='Indicateur :',
+            disabled=False
+        )
+        self.col_para = widgets.VBox(
+            [
+                self.selectModels,
+                self.selectRcps,
+                self.selectVariable,
+                self.selectIndic,
+                self.selectPlot,
+                self.selectPeriod,
+                self.checkAnom,
+                self.btnPlot,
+            ]
+        )
+        self.main = widgets.HBox([self.col_para, self.fig.canvas])
+        
+    def transform_indic(self, df):
+        indic = self.selectIndic.value
+        if indic == 'Cumul mensuelle':
+            df = df.resample('M').sum()
+        elif indic == 'Cumul annuel':
+            df = df.resample('Y').sum()
+        return df
+    
+    def transform_cycle(self, df):
+        df2 = {
+            '1976-2005': df.loc['1976':'2005'],
+            '2021-2050': df.loc['2021':'2050'],
+            '2041-2070': df.loc['2041':'2070'],
+            '2071-2100': df.loc['2071':'2100']
+        }
+        indic = self.selectIndic.value
+        df3 = {}
+        if 'mensuel' in indic:
+            dfc = df2['1976-2005']
+            df3['1976-2005'] = dfc.groupby(dfc.index.month).mean()
+            for period in self.selectPeriod.value:
+                dfc = df2[period]
+                df3[period] = dfc.groupby(dfc.index.month).mean()
+        elif "Journalier" in indic:
+            dfc = df2['1976-2005']
+            df3['1976-2005'] = dfc.groupby(dfc.index.dayofyear).mean()
+            for period in self.selectPeriod.value:
+                dfc = df2[period]
+                df3[period] = dfc.groupby(dfc.index.dayofyear).mean()
+        else:
+            dfc = df2['1976-2005']
+            df3['1976-2005'] = dfc
+            for period in self.selectPeriod.value:
+                dfc = df2[period]
+                df3[period] = dfc
+        df = pd.concat(df3, axis=1, names=['Period'])
+        self.dfmean = df.mean(axis=0)
+        return df
+    
+    def check_sim(self):
+        models = self.selectModels.value
+        rcps = self.selectRcps.value
+        select = {}
+        for model in models:
+            gcm, rcm = model.split(' / ')
+            for rcp in rcps:
+                fetp = 'sims_cc/{0}_{1}_{2}/ETP_Selle_et_Morvillers_{0}_{1}_{2}'.format(gcm, rcm, rcp)
+                fplu = 'sims_cc/{0}_{1}_{2}/Pluie_Selle_et_Morvillers_{0}_{1}_{2}'.format(gcm, rcm, rcp)
+                if os.path.exists(fetp) and os.path.exists(fplu):
+                    select['{0} / {1}_{2}'.format(gcm, rcm, rcp)] = (fetp, fplu)
+        return select
+    
+    def main_sim(self, b):
+        self.btnPlot.disabled = True
+        select = self.check_sim()
+        df = {}
+        for sel, f in select.items():
+            fetp = f[0]
+            fplu = f[1]
+            df[tuple(sel.split('_') + ['Pluie'])] = pd.read_csv(
+                fplu, parse_dates=True, index_col=0, delim_whitespace=True
+            )
+            df[tuple(sel.split('_') + ['ETP'])] = pd.read_csv(
+                fetp, parse_dates=True, index_col=0, delim_whitespace=True
+            )
+        if df:
+            df = pd.concat(df, axis=1, names=['Modèle', 'RCP', 'Variable'])
+            df = df.xs(key=self.selectVariable.value, level='Variable', axis=1)
+            df = self.transform_indic(df)
+            df = self.transform_cycle(df)
+            if self.checkAnom.value:
+                for period in self.selectPeriod.value:
+                    df[period] = df[period] - df['1976-2005']
+                    self.dfmean.loc[(period, slice(None), slice(None))] = (
+                        self.dfmean[period].values - self.dfmean['1976-2005'].values
+                    )
+                del df['1976-2005']
+                del self.dfmean['1976-2005']
+            df = self.transform_ensemble(df)
+            self.dfmean = self.transform_ensemble(self.dfmean, axis=0)
+            self.plot_sim(df)
+            self.test_stats()
+        self.btnPlot.disabled = False
+
