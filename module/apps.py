@@ -650,7 +650,10 @@ class PlotSim2():
 
     def plot_sim(self, df):
         self.ax.clear()
-
+        if self.selectVariable.value == "Débit":
+            self.ax.set_ylabel("m3/s")
+        elif self.selectVariable.value == "Niveau":
+            self.ax.set_ylabel("m")
         ensemble = self.selectPlot.value
         if ensemble == "Q5/Mediane/Q95":
             for rcp in np.unique(df.columns.get_level_values('RCP')):
@@ -698,7 +701,6 @@ class PlotSim2():
         return select
     
     def test_stats(self):
-        indic = self.selectIndic.value
         with self.out:
             self.out.clear_output()
             display(self.dfmean)
@@ -737,7 +739,7 @@ class PlotSim3(PlotSim2):
         
     def transform_indic(self, df):
         indic = self.selectIndic.value
-        if indic == 'Cumul mensuelle':
+        if indic == 'Cumul mensuel':
             df = df.resample('M').sum()
         elif indic == 'Cumul annuel':
             df = df.resample('Y').sum()
@@ -819,3 +821,49 @@ class PlotSim3(PlotSim2):
             self.test_stats()
         self.btnPlot.disabled = False
 
+    def plot_sim(self, df):
+        self.ax.clear()
+        if self.selectVariable.value == "Débit":
+            self.ax.set_ylabel("m3/s")
+        elif self.selectVariable.value == "Niveau":
+            self.ax.set_ylabel("m")
+        indic = self.selectIndic.value
+        if indic == 'Cumul mensuel':
+            self.ax.set_ylabel("mm/mois")
+        elif indic == 'Cumul annuel':
+            self.ax.set_ylabel("mm/an")
+        else:
+            self.ax.set_ylabel("mm/jour")
+        ensemble = self.selectPlot.value
+        if ensemble == "Q5/Mediane/Q95":
+            for rcp in np.unique(df.columns.get_level_values('RCP')):
+                for period in np.unique(df.columns.get_level_values('Period')):
+                    self.ax.plot(df.index, df.loc[:, ("Médiane", period, rcp)], label=(period, rcp))
+                    self.ax.fill_between(
+                        df.index,
+                        df.loc[:, ("q5", period, rcp)],
+                        df.loc[:, ("q95", period, rcp)],
+                        alpha=0.5
+                    )
+        elif ensemble == "Min/Moy/Max":
+            for rcp in np.unique(df.columns.get_level_values('RCP')):
+                for period in np.unique(df.columns.get_level_values('Period')):
+                    self.ax.plot(df.index, df.loc[:, ("Moy", period, rcp)], label=(period, rcp))
+                    self.ax.fill_between(
+                        df.index,
+                        df.loc[:, ("Min", period, rcp)],
+                        df.loc[:, ("Max", period, rcp)],
+                        alpha=0.5
+                    )
+        else:
+            for column in df.columns:
+                df2 = df.iloc[:-1, :]
+                self.ax.plot(df2.index, df2.loc[:, column], label=column)
+        if self.selectIndic.value == "Journalier":
+            self.ax.set_xticks([i for i in range(15, 370, 30)])
+        else:
+            self.ax.set_xticks([i for i in range(1, 13)])
+        self.ax.set_xticklabels(['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'])
+        self.ax.grid()
+        self.ax.legend(loc="upper left", bbox_to_anchor=(1.02, 0, 0.07, 1), prop={'size':6})
+        self.fig.tight_layout()
