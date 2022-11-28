@@ -797,10 +797,10 @@ class PlotSim3(PlotSim2):
             fetp = f[0]
             fplu = f[1]
             df[tuple(sel.split('_') + ['Pluie'])] = pd.read_csv(
-                fplu, parse_dates=True, index_col=0, delim_whitespace=True
+                fplu, parse_dates=True, index_col=0, delim_whitespace=True, dayfirst=True
             )
             df[tuple(sel.split('_') + ['ETP'])] = pd.read_csv(
-                fetp, parse_dates=True, index_col=0, delim_whitespace=True
+                fetp, parse_dates=True, index_col=0, delim_whitespace=True, dayfirst=True
             )
         if df:
             df = pd.concat(df, axis=1, names=['Modèle', 'RCP', 'Variable'])
