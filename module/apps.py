@@ -12,7 +12,7 @@ from IPython.display import display
 import matplotlib
 
 class App():
-    def __init__(self, debit, niveau):
+    def __init__(self, flow, level):
         self.area = 524
         self.start = 365*4
         bounds = [
@@ -22,8 +22,8 @@ class App():
             [6, 70]
         ]
         self.bounds = bounds
-        self.debit = debit.squeeze().values
-        self.niveau = niveau.squeeze().values
+        self.flow = flow.squeeze().values
+        self.level = level.squeeze().values
         self.sliderA = widgets.FloatSlider(
             value=180,
             min=bounds[0][0],
@@ -76,28 +76,27 @@ class App():
         self.baseNiv = widgets.FloatText(120)
         self.widgetbaseNiv = VBox(
             [
-                Label('Niveau de base (m)'),
+                Label('level de base (m)'),
                 self.baseNiv
             ]
         )
         self.coeffEmmag = widgets.FloatText(0.3)
         self.widgetcoeffEmmag = VBox(
             [
-                Label("Coefficient d'emmagasinement (-)"),
+                Label("Specific Yield (-)"),
                 self.coeffEmmag
             ]
         )
         self.set_observe()
         
-        self.textKGE = widgets.FloatText(0, description='KGE Débit')
-        self.textNash = widgets.FloatText(0, description='Nash Débit')
-        self.textKGE = widgets.FloatText(0, description='KGE Débit')
-        self.textNashNiv = widgets.FloatText(0, description='Nash Niveau')
+        self.textKGE = widgets.FloatText(0, description='KGE flow')
+        self.textNash = widgets.FloatText(0, description='Nash flow')
+        self.textNashNiv = widgets.FloatText(0, description='Nash level')
         self.btnOpti = widgets.Button(
-            description='Optimiser',
+            description='Optimize',
             disabled=False,
             button_style='', # 'success', 'info', 'warning', 'danger' or ''
-            tooltip='Optimiser',
+            tooltip='Optimize',
             icon='check'
         )
         self.btnOpti.on_click(self.optimize)
@@ -186,11 +185,11 @@ class App():
         
         q = qq[self.start:]
         h = hh[self.start:]
-        niveau = self.niveau[self.start:]
-        debit = self.debit[self.start:]
+        level = self.level[self.start:]
+        flow = self.flow[self.start:]
         
-        sim_h = h[~np.isnan(niveau)]
-        obs_h = niveau[~np.isnan(niveau)]
+        sim_h = h[~np.isnan(level)]
+        obs_h = level[~np.isnan(level)]
         df = pd.DataFrame(
             {
                 'obs':obs_h,
@@ -208,8 +207,8 @@ class App():
         else:
             f_h = -np.sqrt(-nse_h)
 
-        sim_q = q[~np.isnan(debit)]
-        obs_q = debit[~np.isnan(debit)]
+        sim_q = q[~np.isnan(flow)]
+        obs_q = flow[~np.isnan(flow)]
         nse_q = nash(sim_q, obs_q)
         if nse_q >= -1:
             f_q = np.sqrt(nse_q)
@@ -230,20 +229,20 @@ class App():
         h = NIV + 1 /(EMM * 1000) * np.array(h)
         q = q[self.start:]
         h = h[self.start:]
-        niveau = self.niveau[self.start:]
-        debit = self.debit[self.start:]
+        level = self.level[self.start:]
+        flow = self.flow[self.start:]
         if value == -9999.:
             self.result = pd.DataFrame(
                 {
-                    'Débit':q,
-                    'Niveau':h
+                    'Flow':q,
+                    'level':h
                 },
                 index = self.dates[self.start:]
             )
         else:
             deb_os = pd.DataFrame(
                 {
-                    'obs':debit,
+                    'obs':flow,
                     'sim':q,
                 },
                 index=self.dates[self.start:]
@@ -253,7 +252,7 @@ class App():
                 xlims = self.ax1.get_xlim()
             self.ax1.cla()
             deb_os.plot(ax=self.ax1)
-            self.ax1.set_title("Débit - Selle à Plachy")
+            self.ax1.set_title("Flow - Selle à Plachy")
             self.ax1.set_ylabel("m3/s")
             self.ax1.grid()
             self.textNash.value = nash(deb_os['sim'], deb_os['obs']).round(2)
@@ -261,7 +260,7 @@ class App():
 
             deb_os = pd.DataFrame(
                 {
-                    'obs':niveau,
+                    'obs':level,
                     'sim':h,
                 },
                 index=self.dates[self.start:]
@@ -316,7 +315,7 @@ class PlotSim():
         models.sort()
         self.selectModels = widgets.SelectMultiple(
             options=models,
-            description='Modèles :',
+            description='Models :',
             disabled=False,
             rows=len(models)
         )
@@ -326,33 +325,33 @@ class PlotSim():
             description='RCPs :',
             disabled=False
         )
-        self.selectVariable = widgets.Dropdown(
-            options=['Débit', 'Niveau'],
-            description='Variable :',
+        self.selectParameter = widgets.Dropdown(
+            options=['Flow', 'level'],
+            description='Parameter :',
             disabled=False
         )
         self.selectIndic = widgets.Dropdown(
             options=[
-                'Journalier',
-                'Moyenne mensuelle',
-                'Minimum mensuel',
-                'Maximum mensuel',
-                'Moyenne annuelle',
-                'Minimum annuel',
-                'Maximum annuel'
+                'Daily',
+                'Monthly mean',
+                'Monthly minimum',
+                'Monthly maximum',
+                'Annual mean',
+                'Annual minimum',
+                'Annual maximum'
             ],
             description='Indicateur :',
             disabled=False
         )
         self.selectPlot = widgets.Dropdown(
-            options=['Spaghetti', 'Q5/Mediane/Q95', 'Min/Moy/Max'],
+            options=['Spaghetti', 'Q5/Median/Q95', 'Min/Mean/Max'],
             description='Tracé :',
             disabled=False
         )
 
         self.checkAnom = widgets.Checkbox(
             value=False,
-            description="Anomalie"
+            description="Anomaly"
         )
         self.btnPlot = widgets.Button(
             description='Tracer',
@@ -365,7 +364,7 @@ class PlotSim():
             [
                 self.selectModels,
                 self.selectRcps,
-                self.selectVariable,
+                self.selectParameter,
                 self.selectIndic,
                 self.selectPlot,
                 self.checkAnom,
@@ -377,7 +376,7 @@ class PlotSim():
         self.fig.canvas.header_visible = False
         plt.ion()
         self.main = widgets.HBox([self.col_para, self.fig.canvas])
-        self.label = widgets.Label("Test de Mann-Kendall (uniquement pour les indicateurs annuels) : ")
+        self.label = widgets.Label("Mann-Kendall test (only for annual indicators) : ")
         self.out = widgets.Output(layout=widgets.Layout(overflow='visible', width="1500"))
 
     def main_sim(self, b):
@@ -387,8 +386,8 @@ class PlotSim():
         for sel, f in select.items():
             df[tuple(sel.split('_'))] = pd.read_csv(f, parse_dates=True, index_col=0)
         if df:
-            df = pd.concat(df, axis=1, names=['Modèle', 'RCP', 'Variable'])
-            df = df.xs(key=self.selectVariable.value, level='Variable', axis=1)
+            df = pd.concat(df, axis=1, names=['Model', 'RCP', 'Parameter'])
+            df = df.xs(key=self.selectParameter.value, level='Parameter', axis=1)
 
             df = self.transform_indic(df)
             df = self.transform_anomaly(df)
@@ -399,17 +398,17 @@ class PlotSim():
 
     def transform_indic(self, df):
         indic = self.selectIndic.value
-        if indic == 'Moyenne mensuelle':
+        if indic == 'Monthly mean':
             df = df.resample('M').mean()
-        elif indic == 'Minimum mensuel':
+        elif indic == 'Monthly minimum':
             df = df.resample('M').min()
-        elif indic == 'Maximum mensuel':
+        elif indic == 'Monthly maximum':
             df = df.resample('M').max()
-        elif indic == 'Moyenne annuelle':
+        elif indic == 'Annual mean':
             df = df.resample('Y').mean()
-        elif indic == 'Minimum annuel':
+        elif indic == 'Annual minimum':
             df = df.resample('Y').min()
-        elif indic == 'Maximum annuel':
+        elif indic == 'Annual maximum':
             df = df.resample('Y').max()
         return df
     
@@ -424,37 +423,37 @@ class PlotSim():
     def transform_ensemble(self, df, axis=1):
         ensemble = self.selectPlot.value
         df2 = {}
-        if ensemble == "Q5/Mediane/Q95":
+        if ensemble == "Q5/Median/Q95":
             df2['q5'] = df.groupby(level="RCP", axis=axis).quantile(0.05)
-            df2['Médiane'] = df.groupby(level="RCP", axis=axis).quantile(0.5)
+            df2['Median'] = df.groupby(level="RCP", axis=axis).quantile(0.5)
             df2['q95'] = df.groupby(level="RCP", axis=axis).quantile(0.95)
             df = pd.concat(df2, axis=1)
-        elif ensemble == 'Min/Moy/Max':
+        elif ensemble == 'Min/Mean/Max':
             df2['Min'] = df.groupby(level="RCP", axis=axis).min()
-            df2['Moy'] = df.groupby(level="RCP", axis=axis).mean()
+            df2['Mean'] = df.groupby(level="RCP", axis=axis).mean()
             df2['Max'] = df.groupby(level="RCP", axis=axis).max()
             df = pd.concat(df2, axis=1)
         return df
             
     def plot_sim(self, df):
         self.ax.clear()
-        if self.selectVariable.value == "Débit":
+        if self.selectParameter.value == "Flow":
             self.ax.set_ylabel("m3/s")
-        elif self.selectVariable.value == "Niveau":
+        elif self.selectParameter.value == "level":
             self.ax.set_ylabel("m")
         ensemble = self.selectPlot.value
-        if ensemble == "Q5/Mediane/Q95":
+        if ensemble == "Q5/Median/Q95":
             for rcp in np.unique(df.columns.get_level_values('RCP')):
-                df.loc[:, ("Médiane", rcp)].plot(ax=self.ax, legend=False, grid=True)
+                df.loc[:, ("Median", rcp)].plot(ax=self.ax, legend=False, grid=True)
                 self.ax.fill_between(
                     df.index,
                     df.loc[:, ("q5", rcp)],
                     df.loc[:, ("q95", rcp)],
                     alpha=0.5
             )
-        elif ensemble == "Min/Moy/Max":
+        elif ensemble == "Min/Mean/Max":
             for rcp in np.unique(df.columns.get_level_values('RCP')):
-                df.loc[:, ("Moy", rcp)].plot(ax=self.ax, legend=False, grid=True)
+                df.loc[:, ("Mean", rcp)].plot(ax=self.ax, legend=False, grid=True)
                 self.ax.fill_between(
                     df.index,
                     df.loc[:, ("Min", rcp)],
@@ -502,7 +501,7 @@ class PlotSim2():
         models.sort()
         self.selectModels = widgets.SelectMultiple(
             options=models,
-            description='Modèles :',
+            description='Models :',
             disabled=False,
             rows=len(models)
         )
@@ -512,17 +511,17 @@ class PlotSim2():
             description='RCPs :',
             disabled=False
         )
-        self.selectVariable = widgets.Dropdown(
-            options=['Débit', 'Niveau'],
-            description='Variable :',
+        self.selectParameter = widgets.Dropdown(
+            options=['Flow', 'level'],
+            description='Parameter :',
             disabled=False
         )
         self.selectIndic = widgets.Dropdown(
             options=[
-                'Journalier',
-                'Moyenne mensuelle',
-                'Minimum mensuel',
-                'Maximum mensuel',
+                'Daily',
+                'Monthly mean',
+                'Monthly minimum',
+                'Monthly maximum',
             ],
             description='Indicateur :',
             disabled=False
@@ -537,14 +536,14 @@ class PlotSim2():
             disabled=False
         )
         self.selectPlot = widgets.Dropdown(
-            options=['Spaghetti', 'Q5/Mediane/Q95', 'Min/Moy/Max'],
+            options=['Spaghetti', 'Q5/Median/Q95', 'Min/Mean/Max'],
             description='Tracé :',
             disabled=False
         )
     
         self.checkAnom = widgets.Checkbox(
             value=False,
-            description="Anomalie"
+            description="Anomaly"
         )
         self.btnPlot = widgets.Button(
             description='Tracer',
@@ -557,7 +556,7 @@ class PlotSim2():
             [
                 self.selectModels,
                 self.selectRcps,
-                self.selectVariable,
+                self.selectParameter,
                 self.selectIndic,
                 self.selectPlot,
                 self.selectPeriod,
@@ -570,7 +569,7 @@ class PlotSim2():
         self.fig.canvas.header_visible = False
         plt.ion()
         self.main = widgets.HBox([self.col_para, self.fig.canvas])
-        self.label = widgets.Label("Moyennes interannuelles sur 30 ans : ")
+        self.label = widgets.Label("30-years interannual mean : ")
         self.out = widgets.Output(layout=widgets.Layout(overflow='visible', width="1500"))
 
     def main_sim(self, b):
@@ -580,8 +579,8 @@ class PlotSim2():
         for sel, f in select.items():
             df[tuple(sel.split('_'))] = pd.read_csv(f, parse_dates=True, index_col=0)
         if df:
-            df = pd.concat(df, axis=1, names=['Modèle', 'RCP', 'Variable'])
-            df = df.xs(key=self.selectVariable.value, level='Variable', axis=1)
+            df = pd.concat(df, axis=1, names=['Model', 'RCP', 'Parameter'])
+            df = df.xs(key=self.selectParameter.value, level='Parameter', axis=1)
             df = self.transform_indic(df)
             df = self.transform_cycle(df)
             if self.checkAnom.value:
@@ -600,11 +599,11 @@ class PlotSim2():
 
     def transform_indic(self, df):
         indic = self.selectIndic.value
-        if indic == 'Moyenne mensuelle':
+        if indic == 'Monthly mean':
             df = df.resample('M').mean()
-        elif indic == 'Minimum mensuel':
+        elif indic == 'Monthly minimum':
             df = df.resample('M').min()
-        elif indic == 'Maximum mensuel':
+        elif indic == 'Monthly maximum':
             df = df.resample('M').max()
         return df
 
@@ -636,39 +635,39 @@ class PlotSim2():
     def transform_ensemble(self, df, axis=1):
         ensemble = self.selectPlot.value
         df2 = {}
-        if ensemble == "Q5/Mediane/Q95":
+        if ensemble == "Q5/Median/Q95":
             df2['q5'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.05)
-            df2['Médiane'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.5)
+            df2['Median'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.5)
             df2['q95'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.95)
             df = pd.concat(df2, axis=1)
-        elif ensemble == 'Min/Moy/Max':
+        elif ensemble == 'Min/Mean/Max':
             df2['Min'] = df.groupby(level=("Period", "RCP"), axis=axis).min()
-            df2['Moy'] = df.groupby(level=("Period", "RCP"), axis=axis).mean()
+            df2['Mean'] = df.groupby(level=("Period", "RCP"), axis=axis).mean()
             df2['Max'] = df.groupby(level=("Period", "RCP"), axis=axis).max()
             df = pd.concat(df2, axis=1)
         return df
 
     def plot_sim(self, df):
         self.ax.clear()
-        if self.selectVariable.value == "Débit":
+        if self.selectParameter.value == "Flow":
             self.ax.set_ylabel("m3/s")
-        elif self.selectVariable.value == "Niveau":
+        elif self.selectParameter.value == "level":
             self.ax.set_ylabel("m")
         ensemble = self.selectPlot.value
-        if ensemble == "Q5/Mediane/Q95":
+        if ensemble == "Q5/Median/Q95":
             for rcp in np.unique(df.columns.get_level_values('RCP')):
                 for period in np.unique(df.columns.get_level_values('Period')):
-                    self.ax.plot(df.index, df.loc[:, ("Médiane", period, rcp)], label=(period, rcp))
+                    self.ax.plot(df.index, df.loc[:, ("Median", period, rcp)], label=(period, rcp))
                     self.ax.fill_between(
                         df.index,
                         df.loc[:, ("q5", period, rcp)],
                         df.loc[:, ("q95", period, rcp)],
                         alpha=0.5
                     )
-        elif ensemble == "Min/Moy/Max":
+        elif ensemble == "Min/Mean/Max":
             for rcp in np.unique(df.columns.get_level_values('RCP')):
                 for period in np.unique(df.columns.get_level_values('Period')):
-                    self.ax.plot(df.index, df.loc[:, ("Moy", period, rcp)], label=(period, rcp))
+                    self.ax.plot(df.index, df.loc[:, ("Mean", period, rcp)], label=(period, rcp))
                     self.ax.fill_between(
                         df.index,
                         df.loc[:, ("Min", period, rcp)],
@@ -679,7 +678,7 @@ class PlotSim2():
             for column in df.columns:
                 df2 = df.iloc[:-1, :]
                 self.ax.plot(df2.index, df2.loc[:, column], label=column)
-        if self.selectIndic.value == "Journalier":
+        if self.selectIndic.value == "Daily":
             self.ax.set_xticks([i for i in range(15, 370, 30)])
         else:
             self.ax.set_xticks([i for i in range(1, 13)])
@@ -708,17 +707,17 @@ class PlotSim2():
 class PlotSim3(PlotSim2):
     def __init__(self):
         super().__init__()
-        self.selectVariable = widgets.Dropdown(
-            options=['Pluie', 'ETP'],
-            description='Variable :',
+        self.selectParameter = widgets.Dropdown(
+            options=['Rainfall', 'PET'],
+            description='Parameter :',
             disabled=False
         )
             
         self.selectIndic = widgets.Dropdown(
             options=[
-                'Journalier',
-                'Cumul mensuel',
-                'Cumul annuel',
+                'Daily',
+                'Monthly cumulative',
+                'Annual cumulative',
             ],
             description='Indicateur :',
             disabled=False
@@ -727,7 +726,7 @@ class PlotSim3(PlotSim2):
             [
                 self.selectModels,
                 self.selectRcps,
-                self.selectVariable,
+                self.selectParameter,
                 self.selectIndic,
                 self.selectPlot,
                 self.selectPeriod,
@@ -739,9 +738,9 @@ class PlotSim3(PlotSim2):
         
     def transform_indic(self, df):
         indic = self.selectIndic.value
-        if indic == 'Cumul mensuel':
+        if indic == 'Monthly cumulative':
             df = df.resample('M').sum()
-        elif indic == 'Cumul annuel':
+        elif indic == 'Annual cumulative':
             df = df.resample('Y').sum()
         return df
     
@@ -760,7 +759,7 @@ class PlotSim3(PlotSim2):
             for period in self.selectPeriod.value:
                 dfc = df2[period]
                 df3[period] = dfc.groupby(dfc.index.month).mean()
-        elif "Journalier" in indic:
+        elif "Daily" in indic:
             dfc = df2['1976-2005']
             df3['1976-2005'] = dfc.groupby(dfc.index.dayofyear).mean()
             for period in self.selectPeriod.value:
@@ -783,8 +782,8 @@ class PlotSim3(PlotSim2):
         for model in models:
             gcm, rcm = model.split(' / ')
             for rcp in rcps:
-                fetp = 'sims_cc/{0}_{1}_{2}/ETP_Selle_et_Morvillers_{0}_{1}_{2}'.format(gcm, rcm, rcp)
-                fplu = 'sims_cc/{0}_{1}_{2}/Pluie_Selle_et_Morvillers_{0}_{1}_{2}'.format(gcm, rcm, rcp)
+                fetp = 'sims_cc/{0}_{1}_{2}/PET_Selle_et_Morvillers_{0}_{1}_{2}'.format(gcm, rcm, rcp)
+                fplu = 'sims_cc/{0}_{1}_{2}/Rainfall_Selle_et_Morvillers_{0}_{1}_{2}'.format(gcm, rcm, rcp)
                 if os.path.exists(fetp) and os.path.exists(fplu):
                     select['{0} / {1}_{2}'.format(gcm, rcm, rcp)] = (fetp, fplu)
         return select
@@ -796,15 +795,15 @@ class PlotSim3(PlotSim2):
         for sel, f in select.items():
             fetp = f[0]
             fplu = f[1]
-            df[tuple(sel.split('_') + ['Pluie'])] = pd.read_csv(
+            df[tuple(sel.split('_') + ['Rainfall'])] = pd.read_csv(
                 fplu, parse_dates=True, index_col=0, delim_whitespace=True, dayfirst=True
             )
-            df[tuple(sel.split('_') + ['ETP'])] = pd.read_csv(
+            df[tuple(sel.split('_') + ['PET'])] = pd.read_csv(
                 fetp, parse_dates=True, index_col=0, delim_whitespace=True, dayfirst=True
             )
         if df:
-            df = pd.concat(df, axis=1, names=['Modèle', 'RCP', 'Variable'])
-            df = df.xs(key=self.selectVariable.value, level='Variable', axis=1)
+            df = pd.concat(df, axis=1, names=['Model', 'RCP', 'Parameter'])
+            df = df.xs(key=self.selectParameter.value, level='Parameter', axis=1)
             df = self.transform_indic(df)
             df = self.transform_cycle(df)
             if self.checkAnom.value:
@@ -823,32 +822,32 @@ class PlotSim3(PlotSim2):
 
     def plot_sim(self, df):
         self.ax.clear()
-        if self.selectVariable.value == "Débit":
+        if self.selectParameter.value == "Flow":
             self.ax.set_ylabel("m3/s")
-        elif self.selectVariable.value == "Niveau":
+        elif self.selectParameter.value == "level":
             self.ax.set_ylabel("m")
         indic = self.selectIndic.value
-        if indic == 'Cumul mensuel':
-            self.ax.set_ylabel("mm/mois")
-        elif indic == 'Cumul annuel':
-            self.ax.set_ylabel("mm/an")
+        if indic == 'Monthly cumulative':
+            self.ax.set_ylabel("mm/month")
+        elif indic == 'Annual cumulative':
+            self.ax.set_ylabel("mm/year")
         else:
-            self.ax.set_ylabel("mm/jour")
+            self.ax.set_ylabel("mm/day")
         ensemble = self.selectPlot.value
-        if ensemble == "Q5/Mediane/Q95":
+        if ensemble == "Q5/Median/Q95":
             for rcp in np.unique(df.columns.get_level_values('RCP')):
                 for period in np.unique(df.columns.get_level_values('Period')):
-                    self.ax.plot(df.index, df.loc[:, ("Médiane", period, rcp)], label=(period, rcp))
+                    self.ax.plot(df.index, df.loc[:, ("Median", period, rcp)], label=(period, rcp))
                     self.ax.fill_between(
                         df.index,
                         df.loc[:, ("q5", period, rcp)],
                         df.loc[:, ("q95", period, rcp)],
                         alpha=0.5
                     )
-        elif ensemble == "Min/Moy/Max":
+        elif ensemble == "Min/Mean/Max":
             for rcp in np.unique(df.columns.get_level_values('RCP')):
                 for period in np.unique(df.columns.get_level_values('Period')):
-                    self.ax.plot(df.index, df.loc[:, ("Moy", period, rcp)], label=(period, rcp))
+                    self.ax.plot(df.index, df.loc[:, ("Mean", period, rcp)], label=(period, rcp))
                     self.ax.fill_between(
                         df.index,
                         df.loc[:, ("Min", period, rcp)],
@@ -859,7 +858,7 @@ class PlotSim3(PlotSim2):
             for column in df.columns:
                 df2 = df.iloc[:-1, :]
                 self.ax.plot(df2.index, df2.loc[:, column], label=column)
-        if self.selectIndic.value == "Journalier":
+        if self.selectIndic.value == "Daily":
             self.ax.set_xticks([i for i in range(15, 370, 30)])
         else:
             self.ax.set_xticks([i for i in range(1, 13)])
