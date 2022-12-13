@@ -33,7 +33,7 @@ class App():
 
         self.widgetA = VBox(
             [
-                Label('Capacité du réservoir sol progressif (mm)'),
+                Label('Progressive storage capacity (mm)'),
                 self.sliderA
             ]
         )
@@ -45,7 +45,7 @@ class App():
         )
         self.widgetR = VBox(
             [
-                Label('Hauteur de ruissellement/percolation (mm)'),
+                Label('Runoff/percolation repartition level (mm)'),
                 self.sliderR
             ]
         )
@@ -57,7 +57,7 @@ class App():
         )
         self.widgetTHG = VBox(
             [
-                Label('Temps de demi-percolation du réservoir intermédiaire (mois)'),
+                Label('Half-percolation time (month)'),
                 self.sliderTHG
             ]
         )
@@ -69,14 +69,14 @@ class App():
         )
         self.widgetTG1 = VBox(
             [
-                Label('Temps de demi-tarissement du réservoir souterrain (mois)'),
+                Label('Half-recession time (month)'),
                 self.sliderTG1
             ]
         )
         self.baseNiv = widgets.FloatText(120)
         self.widgetbaseNiv = VBox(
             [
-                Label('level de base (m)'),
+                Label('Base groundwater level (m)'),
                 self.baseNiv
             ]
         )
@@ -89,9 +89,9 @@ class App():
         )
         self.set_observe()
         
-        self.textKGE = widgets.FloatText(0, description='KGE flow')
-        self.textNash = widgets.FloatText(0, description='Nash flow')
-        self.textNashNiv = widgets.FloatText(0, description='Nash level')
+        self.textKGE = widgets.FloatText(0, description='KGE - river flow')
+        self.textNash = widgets.FloatText(0, description='Nash - river flow')
+        self.textNashNiv = widgets.FloatText(0, description='Nash - groundwater level')
         self.btnOpti = widgets.Button(
             description='Optimize',
             disabled=False,
@@ -252,7 +252,7 @@ class App():
                 xlims = self.ax1.get_xlim()
             self.ax1.cla()
             deb_os.plot(ax=self.ax1)
-            self.ax1.set_title("Flow - Selle à Plachy")
+            self.ax1.set_title("River flow - Selle at Plachy")
             self.ax1.set_ylabel("m3/s")
             self.ax1.grid()
             self.textNash.value = nash(deb_os['sim'], deb_os['obs']).round(2)
@@ -268,7 +268,7 @@ class App():
             deb_os = deb_os.dropna()
             self.ax2.cla()
             deb_os.plot(ax=self.ax2)
-            self.ax2.set_title("Piézomètre à Morvillers")
+            self.ax2.set_title("Groundwater level - Morvillers monitoring well")
             self.ax2.set_ylabel("m")
             self.ax2.grid()
             self.textNashNiv.value = nash(deb_os['sim'], deb_os['obs']).round(2)
@@ -326,7 +326,7 @@ class PlotSim():
             disabled=False
         )
         self.selectParameter = widgets.Dropdown(
-            options=['Flow', 'level'],
+            options=['River flow', 'Groundwater level'],
             description='Parameter :',
             disabled=False
         )
@@ -437,9 +437,9 @@ class PlotSim():
             
     def plot_sim(self, df):
         self.ax.clear()
-        if self.selectParameter.value == "Flow":
+        if self.selectParameter.value == "River flow":
             self.ax.set_ylabel("m3/s")
-        elif self.selectParameter.value == "level":
+        elif self.selectParameter.value == "Groundwater level":
             self.ax.set_ylabel("m")
         ensemble = self.selectPlot.value
         if ensemble == "Q5/Median/Q95":
@@ -512,7 +512,7 @@ class PlotSim2():
             disabled=False
         )
         self.selectParameter = widgets.Dropdown(
-            options=['Flow', 'level'],
+            options=['River flow', 'Groundwater level'],
             description='Parameter :',
             disabled=False
         )
@@ -649,9 +649,9 @@ class PlotSim2():
 
     def plot_sim(self, df):
         self.ax.clear()
-        if self.selectParameter.value == "Flow":
+        if self.selectParameter.value == "River flow":
             self.ax.set_ylabel("m3/s")
-        elif self.selectParameter.value == "level":
+        elif self.selectParameter.value == "Groundwater level":
             self.ax.set_ylabel("m")
         ensemble = self.selectPlot.value
         if ensemble == "Q5/Median/Q95":
@@ -822,9 +822,9 @@ class PlotSim3(PlotSim2):
 
     def plot_sim(self, df):
         self.ax.clear()
-        if self.selectParameter.value == "Flow":
+        if self.selectParameter.value == "River flow":
             self.ax.set_ylabel("m3/s")
-        elif self.selectParameter.value == "level":
+        elif self.selectParameter.value == "Groundwater level":
             self.ax.set_ylabel("m")
         indic = self.selectIndic.value
         if indic == 'Monthly cumulative':
