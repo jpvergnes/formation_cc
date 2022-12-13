@@ -340,7 +340,7 @@ class PlotSim():
                 'Annual minimum',
                 'Annual maximum'
             ],
-            description='Indicateur :',
+            description='Variable :',
             disabled=False
         )
         self.selectPlot = widgets.Dropdown(
@@ -569,7 +569,7 @@ class PlotSim2():
         self.fig.canvas.header_visible = False
         plt.ion()
         self.main = widgets.HBox([self.col_para, self.fig.canvas])
-        self.label = widgets.Label("30-years interannul mean : ")
+        self.label = widgets.Label("30-years interannual mean : ")
         self.out = widgets.Output(layout=widgets.Layout(overflow='visible', width="1500"))
 
     def main_sim(self, b):
@@ -637,7 +637,7 @@ class PlotSim2():
         df2 = {}
         if ensemble == "Q5/Median/Q95":
             df2['q5'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.05)
-            df2['Médiane'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.5)
+            df2['Median'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.5)
             df2['q95'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.95)
             df = pd.concat(df2, axis=1)
         elif ensemble == 'Min/Mean/Max':
