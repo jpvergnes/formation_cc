@@ -12,7 +12,7 @@ from IPython.display import display
 import matplotlib
 
 class App():
-    def __init__(self, flow, level):
+    def __init__(self, debit, niveau):
         self.area = 524
         self.start = 365*4
         bounds = [
@@ -22,8 +22,8 @@ class App():
             [6, 70]
         ]
         self.bounds = bounds
-        self.flow = flow.squeeze().values
-        self.level = level.squeeze().values
+        self.debit = debit.squeeze().values
+        self.niveau = niveau.squeeze().values
         self.sliderA = widgets.FloatSlider(
             value=180,
             min=bounds[0][0],
@@ -45,7 +45,7 @@ class App():
         )
         self.widgetR = VBox(
             [
-                Label('Runoff/percolation repartition level (mm)'),
+                Label('Runoff/percolation repartition level  (mm)'),
                 self.sliderR
             ]
         )
@@ -185,11 +185,11 @@ class App():
         
         q = qq[self.start:]
         h = hh[self.start:]
-        level = self.level[self.start:]
-        flow = self.flow[self.start:]
+        niveau = self.niveau[self.start:]
+        debit = self.debit[self.start:]
         
-        sim_h = h[~np.isnan(level)]
-        obs_h = level[~np.isnan(level)]
+        sim_h = h[~np.isnan(niveau)]
+        obs_h = niveau[~np.isnan(niveau)]
         df = pd.DataFrame(
             {
                 'obs':obs_h,
@@ -207,8 +207,8 @@ class App():
         else:
             f_h = -np.sqrt(-nse_h)
 
-        sim_q = q[~np.isnan(flow)]
-        obs_q = flow[~np.isnan(flow)]
+        sim_q = q[~np.isnan(debit)]
+        obs_q = debit[~np.isnan(debit)]
         nse_q = nash(sim_q, obs_q)
         if nse_q >= -1:
             f_q = np.sqrt(nse_q)
@@ -229,21 +229,21 @@ class App():
         h = NIV + 1 /(EMM * 1000) * np.array(h)
         q = q[self.start:]
         h = h[self.start:]
-        level = self.level[self.start:]
-        flow = self.flow[self.start:]
+        niveau = self.niveau[self.start:]
+        debit = self.debit[self.start:]
         if value == -9999.:
             self.result = pd.DataFrame(
                 {
-                    'Flow':q,
-                    'level':h
+                    'River flow':q,
+                    'Groundwater level':h
                 },
                 index = self.dates[self.start:]
             )
         else:
             deb_os = pd.DataFrame(
                 {
-                    'obs':flow,
-                    'sim':q,
+                    'OBS':debit,
+                    'SIM':q,
                 },
                 index=self.dates[self.start:]
             )
@@ -255,23 +255,23 @@ class App():
             self.ax1.set_title("River flow - Selle at Plachy")
             self.ax1.set_ylabel("m3/s")
             self.ax1.grid()
-            self.textNash.value = nash(deb_os['sim'], deb_os['obs']).round(2)
-            self.textKGE.value = kge(deb_os['sim'], deb_os['obs']).round(2)
+            self.textNash.value = nash(deb_os['SIM'], deb_os['OBS']).round(2)
+            self.textKGE.value = kge(deb_os['SIM'], deb_os['OBS']).round(2)
 
             deb_os = pd.DataFrame(
                 {
-                    'obs':level,
-                    'sim':h,
+                    'OBS':niveau,
+                    'SIM':h,
                 },
                 index=self.dates[self.start:]
             )
             deb_os = deb_os.dropna()
             self.ax2.cla()
             deb_os.plot(ax=self.ax2)
-            self.ax2.set_title("Groundwater level - Morvillers monitoring well")
+            self.ax2.set_title("Morvillers monitoring well")
             self.ax2.set_ylabel("m")
             self.ax2.grid()
-            self.textNashNiv.value = nash(deb_os['sim'], deb_os['obs']).round(2)
+            self.textNashNiv.value = nash(deb_os['SIM'], deb_os['OBS']).round(2)
 
             if self.xlims is None:
                 self.xlims = self.ax1.get_xlim()
@@ -325,7 +325,7 @@ class PlotSim():
             description='RCPs :',
             disabled=False
         )
-        self.selectParameter = widgets.Dropdown(
+        self.selectVariable = widgets.Dropdown(
             options=['River flow', 'Groundwater level'],
             description='Parameter :',
             disabled=False
@@ -340,7 +340,7 @@ class PlotSim():
                 'Annual minimum',
                 'Annual maximum'
             ],
-            description='Variable :',
+            description='Indicateur :',
             disabled=False
         )
         self.selectPlot = widgets.Dropdown(
@@ -364,7 +364,7 @@ class PlotSim():
             [
                 self.selectModels,
                 self.selectRcps,
-                self.selectParameter,
+                self.selectVariable,
                 self.selectIndic,
                 self.selectPlot,
                 self.checkAnom,
@@ -376,7 +376,7 @@ class PlotSim():
         self.fig.canvas.header_visible = False
         plt.ion()
         self.main = widgets.HBox([self.col_para, self.fig.canvas])
-        self.label = widgets.Label("Mann-Kendall test (only for annual indicators) : ")
+        self.label = widgets.Label("Mann-Kendall test (only for annual variables) : ")
         self.out = widgets.Output(layout=widgets.Layout(overflow='visible', width="1500"))
 
     def main_sim(self, b):
@@ -386,8 +386,8 @@ class PlotSim():
         for sel, f in select.items():
             df[tuple(sel.split('_'))] = pd.read_csv(f, parse_dates=True, index_col=0)
         if df:
-            df = pd.concat(df, axis=1, names=['Model', 'RCP', 'Parameter'])
-            df = df.xs(key=self.selectParameter.value, level='Parameter', axis=1)
+            df = pd.concat(df, axis=1, names=['Modèle', 'RCP', 'Variable'])
+            df = df.xs(key=self.selectVariable.value, level='Variable', axis=1)
 
             df = self.transform_indic(df)
             df = self.transform_anomaly(df)
@@ -437,9 +437,9 @@ class PlotSim():
             
     def plot_sim(self, df):
         self.ax.clear()
-        if self.selectParameter.value == "River flow":
+        if self.selectVariable.value == "River flow":
             self.ax.set_ylabel("m3/s")
-        elif self.selectParameter.value == "Groundwater level":
+        elif self.selectVariable.value == "Groundwater level":
             self.ax.set_ylabel("m")
         ensemble = self.selectPlot.value
         if ensemble == "Q5/Median/Q95":
@@ -480,7 +480,7 @@ class PlotSim():
     def test_mk(self, df):
         indic = self.selectIndic.value
         dfout = {}
-        if "annuel" in indic:
+        if "Annual" in indic:
             for column in df.columns:
                 serie = {}
                 result = mk.original_test(df.loc[:, column].dropna().values)
@@ -511,7 +511,7 @@ class PlotSim2():
             description='RCPs :',
             disabled=False
         )
-        self.selectParameter = widgets.Dropdown(
+        self.selectVariable = widgets.Dropdown(
             options=['River flow', 'Groundwater level'],
             description='Parameter :',
             disabled=False
@@ -523,7 +523,7 @@ class PlotSim2():
                 'Monthly minimum',
                 'Monthly maximum',
             ],
-            description='Indicateur :',
+            description='Variable :',
             disabled=False
         )
         self.selectPeriod = widgets.SelectMultiple(
@@ -532,7 +532,7 @@ class PlotSim2():
                 '2041-2070',
                 '2071-2100',
             ],
-            description='Période :',
+            description='Period :',
             disabled=False
         )
         self.selectPlot = widgets.Dropdown(
@@ -556,7 +556,7 @@ class PlotSim2():
             [
                 self.selectModels,
                 self.selectRcps,
-                self.selectParameter,
+                self.selectVariable,
                 self.selectIndic,
                 self.selectPlot,
                 self.selectPeriod,
@@ -569,7 +569,7 @@ class PlotSim2():
         self.fig.canvas.header_visible = False
         plt.ion()
         self.main = widgets.HBox([self.col_para, self.fig.canvas])
-        self.label = widgets.Label("30-years interannual mean : ")
+        self.label = widgets.Label("30-years interannul mean : ")
         self.out = widgets.Output(layout=widgets.Layout(overflow='visible', width="1500"))
 
     def main_sim(self, b):
@@ -579,8 +579,8 @@ class PlotSim2():
         for sel, f in select.items():
             df[tuple(sel.split('_'))] = pd.read_csv(f, parse_dates=True, index_col=0)
         if df:
-            df = pd.concat(df, axis=1, names=['Model', 'RCP', 'Parameter'])
-            df = df.xs(key=self.selectParameter.value, level='Parameter', axis=1)
+            df = pd.concat(df, axis=1, names=['Modèle', 'RCP', 'Variable'])
+            df = df.xs(key=self.selectVariable.value, level='Variable', axis=1)
             df = self.transform_indic(df)
             df = self.transform_cycle(df)
             if self.checkAnom.value:
@@ -616,7 +616,7 @@ class PlotSim2():
         }
         indic = self.selectIndic.value
         df3 = {}
-        if 'mensuel' in indic:
+        if 'Monthly' in indic:
             dfc = df2['1976-2005']
             df3['1976-2005'] = dfc.groupby(dfc.index.month).mean()
             for period in self.selectPeriod.value:
@@ -637,21 +637,21 @@ class PlotSim2():
         df2 = {}
         if ensemble == "Q5/Median/Q95":
             df2['q5'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.05)
-            df2['Median'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.5)
+            df2['Médiane'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.5)
             df2['q95'] = df.groupby(level=("Period", "RCP"), axis=axis).quantile(0.95)
             df = pd.concat(df2, axis=1)
         elif ensemble == 'Min/Mean/Max':
             df2['Min'] = df.groupby(level=("Period", "RCP"), axis=axis).min()
-            df2['Mean'] = df.groupby(level=("Period", "RCP"), axis=axis).mean()
+            df2['Moy'] = df.groupby(level=("Period", "RCP"), axis=axis).mean()
             df2['Max'] = df.groupby(level=("Period", "RCP"), axis=axis).max()
             df = pd.concat(df2, axis=1)
         return df
 
     def plot_sim(self, df):
         self.ax.clear()
-        if self.selectParameter.value == "River flow":
+        if self.selectVariable.value == "River flow":
             self.ax.set_ylabel("m3/s")
-        elif self.selectParameter.value == "Groundwater level":
+        elif self.selectVariable.value == "Groundwater level":
             self.ax.set_ylabel("m")
         ensemble = self.selectPlot.value
         if ensemble == "Q5/Median/Q95":
@@ -707,7 +707,7 @@ class PlotSim2():
 class PlotSim3(PlotSim2):
     def __init__(self):
         super().__init__()
-        self.selectParameter = widgets.Dropdown(
+        self.selectVariable = widgets.Dropdown(
             options=['Rainfall', 'PET'],
             description='Parameter :',
             disabled=False
@@ -719,14 +719,14 @@ class PlotSim3(PlotSim2):
                 'Monthly cumulative',
                 'Annual cumulative',
             ],
-            description='Indicateur :',
+            description='Variable :',
             disabled=False
         )
         self.col_para = widgets.VBox(
             [
                 self.selectModels,
                 self.selectRcps,
-                self.selectParameter,
+                self.selectVariable,
                 self.selectIndic,
                 self.selectPlot,
                 self.selectPeriod,
@@ -753,7 +753,7 @@ class PlotSim3(PlotSim2):
         }
         indic = self.selectIndic.value
         df3 = {}
-        if 'mensuel' in indic:
+        if 'Monthly' in indic:
             dfc = df2['1976-2005']
             df3['1976-2005'] = dfc.groupby(dfc.index.month).mean()
             for period in self.selectPeriod.value:
@@ -782,8 +782,8 @@ class PlotSim3(PlotSim2):
         for model in models:
             gcm, rcm = model.split(' / ')
             for rcp in rcps:
-                fetp = 'sims_cc/{0}_{1}_{2}/PET_Selle_et_Morvillers_{0}_{1}_{2}'.format(gcm, rcm, rcp)
-                fplu = 'sims_cc/{0}_{1}_{2}/Rainfall_Selle_et_Morvillers_{0}_{1}_{2}'.format(gcm, rcm, rcp)
+                fetp = 'sims_cc/{0}_{1}_{2}/ETP_Selle_et_Morvillers_{0}_{1}_{2}'.format(gcm, rcm, rcp)
+                fplu = 'sims_cc/{0}_{1}_{2}/Pluie_Selle_et_Morvillers_{0}_{1}_{2}'.format(gcm, rcm, rcp)
                 if os.path.exists(fetp) and os.path.exists(fplu):
                     select['{0} / {1}_{2}'.format(gcm, rcm, rcp)] = (fetp, fplu)
         return select
@@ -802,8 +802,8 @@ class PlotSim3(PlotSim2):
                 fetp, parse_dates=True, index_col=0, delim_whitespace=True, dayfirst=True
             )
         if df:
-            df = pd.concat(df, axis=1, names=['Model', 'RCP', 'Parameter'])
-            df = df.xs(key=self.selectParameter.value, level='Parameter', axis=1)
+            df = pd.concat(df, axis=1, names=['Modèle', 'RCP', 'Variable'])
+            df = df.xs(key=self.selectVariable.value, level='Variable', axis=1)
             df = self.transform_indic(df)
             df = self.transform_cycle(df)
             if self.checkAnom.value:
@@ -822,9 +822,9 @@ class PlotSim3(PlotSim2):
 
     def plot_sim(self, df):
         self.ax.clear()
-        if self.selectParameter.value == "River flow":
+        if self.selectVariable.value == "River flow":
             self.ax.set_ylabel("m3/s")
-        elif self.selectParameter.value == "Groundwater level":
+        elif self.selectVariable.value == "Groundwater level":
             self.ax.set_ylabel("m")
         indic = self.selectIndic.value
         if indic == 'Monthly cumulative':
