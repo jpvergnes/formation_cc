@@ -340,12 +340,12 @@ class PlotSim():
                 'Annual minimum',
                 'Annual maximum'
             ],
-            description='Indicateur :',
+            description='Variable :',
             disabled=False
         )
         self.selectPlot = widgets.Dropdown(
             options=['Spaghetti', 'Q5/Median/Q95', 'Min/Mean/Max'],
-            description='Tracé :',
+            description='Representation :',
             disabled=False
         )
 
@@ -354,7 +354,7 @@ class PlotSim():
             description="Anomaly"
         )
         self.btnPlot = widgets.Button(
-            description='Tracer',
+            description='Plot',
             disabled=False,
             icon='check'
         )
@@ -537,7 +537,7 @@ class PlotSim2():
         )
         self.selectPlot = widgets.Dropdown(
             options=['Spaghetti', 'Q5/Median/Q95', 'Min/Mean/Max'],
-            description='Tracé :',
+            description='Representation :',
             disabled=False
         )
     
@@ -546,7 +546,7 @@ class PlotSim2():
             description="Anomaly"
         )
         self.btnPlot = widgets.Button(
-            description='Tracer',
+            description='Plot',
             disabled=False,
             icon='check'
         )
