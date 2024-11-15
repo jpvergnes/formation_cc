@@ -591,7 +591,7 @@ class PlotSim2():
                         self.dfmean[period].values - self.dfmean['1976-2005'].values
                     )
                 del df['1976-2005']
-                del self.dfmean['1976-2005']
+                self.dfmean.drop('1976-2005')
             df = self.transform_ensemble(df)
             self.dfmean = self.transform_ensemble(self.dfmean, axis=0)
             self.plot_sim(df)
@@ -814,7 +814,7 @@ class PlotSim3(PlotSim2):
                         self.dfmean[period].values - self.dfmean['1976-2005'].values
                     )
                 del df['1976-2005']
-                del self.dfmean['1976-2005']
+                self.dfmean.drop('1976-2005')
             df = self.transform_ensemble(df)
             self.dfmean = self.transform_ensemble(self.dfmean, axis=0)
             self.plot_sim(df)
